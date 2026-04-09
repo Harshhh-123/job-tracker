@@ -1,16 +1,39 @@
-# React + Vite
+# Job Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An AI-assisted job application tracker built with the MERN stack.
 
-Currently, two official plugins are available:
+## Features
+- JWT Authentication (Register/Login)
+- Kanban board with 5 stages: Applied, Phone Screen, Interview, Offer, Rejected
+- Drag and drop cards between columns
+- Add, Edit, Delete job applications
+- Data persisted in MongoDB Atlas
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
+- Frontend: React, Vite, CSS
+- Backend: Node.js, Express.js
+- Database: MongoDB Atlas + Mongoose
+- Auth: JWT + bcryptjs
 
-## React Compiler
+## How to Run
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Backend
+cd server
+npm install
+npm run dev
 
-## Expanding the ESLint configuration
+### Frontend
+cd client
+npm install
+npm run dev
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Environment Variables
+Create a `.env` file in the `server` folder:
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+
+## Decisions
+- Used standard MongoDB connection string instead of SRV for compatibility
+- JWT stored in localStorage for session persistence
+- Kanban drag-and-drop built with HTML5 native drag events
