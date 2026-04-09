@@ -19,6 +19,7 @@ export default function App() {
   const [parsing, setParsing] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [parseError, setParseError] = useState('');
+  const [selectedApp, setSelectedApp] = useState(null);
 
   useEffect(() => { if (token) fetchApps(); }, [token]);
 
@@ -86,6 +87,7 @@ export default function App() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this application?')) return;
     await fetch(`${API}/applications/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    setSelectedApp(null);
     fetchApps();
   };
 
@@ -121,6 +123,28 @@ export default function App() {
         </div>
       </div>
 
+      {/* Card Detail View */}
+      {selectedApp && (
+        <div className="modal" onClick={() => setSelectedApp(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h2>📋 Application Detail</h2>
+            <div className="detail-row"><strong>Company:</strong> <span>{selectedApp.company}</span></div>
+            <div className="detail-row"><strong>Role:</strong> <span>{selectedApp.role}</span></div>
+            <div className="detail-row"><strong>Status:</strong> <span className="status-badge">{selectedApp.status}</span></div>
+            <div className="detail-row"><strong>Date Applied:</strong> <span>{new Date(selectedApp.dateApplied || selectedApp.createdAt).toLocaleDateString()}</span></div>
+            {selectedApp.salaryRange && <div className="detail-row"><strong>Salary:</strong> <span>{selectedApp.salaryRange}</span></div>}
+            {selectedApp.jdLink && <div className="detail-row"><strong>JD Link:</strong> <a href={selectedApp.jdLink} target="_blank" rel="noreferrer">{selectedApp.jdLink}</a></div>}
+            {selectedApp.notes && <div className="detail-row"><strong>Notes:</strong> <span>{selectedApp.notes}</span></div>}
+            <div className="btn-group" style={{marginTop:'16px'}}>
+              <button onClick={() => { setForm({company:selectedApp.company,role:selectedApp.role,status:selectedApp.status,notes:selectedApp.notes||'',jdLink:selectedApp.jdLink||'',salaryRange:selectedApp.salaryRange||'',dateApplied:selectedApp.dateApplied?.split('T')[0]||new Date().toISOString().split('T')[0]}); setEditId(selectedApp._id); setShowForm(true); setSelectedApp(null); setSuggestions([]); }}>Edit</button>
+              <button onClick={() => handleDelete(selectedApp._id)} className="del">Delete</button>
+              <button onClick={() => setSelectedApp(null)} className="cancel">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Form */}
       {showForm && (
         <div className="modal">
           <div className="modal-content">
@@ -167,12 +191,14 @@ export default function App() {
               <p className="empty-col">No applications</p>
             )}
             {apps.filter(a => a.status === status).map(app => (
-              <div key={app._id} className="card" draggable onDragStart={() => setDragging(app)}>
+              <div key={app._id} className="card" draggable
+                onDragStart={() => setDragging(app)}
+                onClick={() => setSelectedApp(app)}>
                 <h4>{app.company}</h4>
                 <p>{app.role}</p>
                 {app.salaryRange && <p className="salary">💰 {app.salaryRange}</p>}
                 <p className="date">📅 {new Date(app.dateApplied || app.createdAt).toLocaleDateString()}</p>
-                <div className="card-actions">
+                <div className="card-actions" onClick={e => e.stopPropagation()}>
                   <button type="button" onClick={() => { setForm({company:app.company,role:app.role,status:app.status,notes:app.notes||'',jdLink:app.jdLink||'',salaryRange:app.salaryRange||'',dateApplied:app.dateApplied?.split('T')[0]||new Date().toISOString().split('T')[0]}); setEditId(app._id); setShowForm(true); setSuggestions([]); setParseError(''); }}>Edit</button>
                   <button type="button" onClick={() => handleDelete(app._id)} className="del">Delete</button>
                 </div>
