@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import './App.css';
 
 const API = 'http://localhost:5000/api';
-
 const STATUSES = ['Applied','Phone Screen','Interview','Offer','Rejected'];
 
 export default function App() {
@@ -16,6 +15,9 @@ export default function App() {
   const [form, setForm] = useState({ company:'', role:'', status:'Applied', notes:'', jdLink:'' });
   const [editId, setEditId] = useState(null);
   const [dragging, setDragging] = useState(null);
+  const [jd, setJd] = useState('');
+  const [parsing, setParsing] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => { if (token) fetchApps(); }, [token]);
 
@@ -36,12 +38,40 @@ export default function App() {
     else setError(data.message || 'Error');
   };
 
+  const handleParseJD = () => {
+    alert('Parsing: ' + jd.substring(0, 30));
+    if (!jd.trim()) { alert('JD is empty!'); return; }
+    setParsing(true);
+    setSuggestions([]);
+    fetch(`${API}/ai/parse`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ jd })
+    })
+    .then(r => r.json())
+    .then(data => {
+      alert('Parsed: ' + JSON.stringify(data));
+      setForm(f => ({ ...f, company: data.company || f.company, role: data.role || f.role }));
+      return fetch(`${API}/ai/suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ role: data.role, skills: data.skills || [] })
+      });
+    })
+    .then(r => r.json())
+    .then(bullets => {
+      setSuggestions(Array.isArray(bullets) ? bullets : []);
+      setParsing(false);
+    })
+    .catch(e => { alert('Error: ' + e.message); setParsing(false); });
+  };
+
   const handleSubmit = async () => {
     const url = editId ? `${API}/applications/${editId}` : `${API}/applications`;
     const method = editId ? 'PUT' : 'POST';
     await fetch(url, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(form) });
     setForm({ company:'', role:'', status:'Applied', notes:'', jdLink:'' });
-    setShowForm(false); setEditId(null); fetchApps();
+    setShowForm(false); setEditId(null); setJd(''); setSuggestions([]); fetchApps();
   };
 
   const handleDelete = async (id) => {
@@ -76,7 +106,7 @@ export default function App() {
       <div className="header">
         <h1>Job Tracker</h1>
         <div>
-          <button onClick={() => { setShowForm(true); setEditId(null); setForm({ company:'', role:'', status:'Applied', notes:'', jdLink:'' }); }}>+ Add Application</button>
+          <button onClick={() => { setShowForm(true); setEditId(null); setForm({ company:'', role:'', status:'Applied', notes:'', jdLink:'' }); setJd(''); setSuggestions([]); }}>+ Add Application</button>
           <button onClick={logout} className="logout">Logout</button>
         </div>
       </div>
@@ -85,6 +115,21 @@ export default function App() {
         <div className="modal">
           <div className="modal-content">
             <h2>{editId ? 'Edit' : 'Add'} Application</h2>
+            <textarea placeholder="Paste Job Description here for AI parsing..." value={jd} onChange={e => setJd(e.target.value)} className="jd-input" />
+            <button type="button" onClick={handleParseJD} className="parse-btn" disabled={parsing}>
+              {parsing ? '⏳ Parsing...' : '🤖 Parse with AI'}
+            </button>
+            {suggestions.length > 0 && (
+              <div className="suggestions">
+                <h4>✨ AI Resume Suggestions:</h4>
+                {suggestions.map((s, i) => (
+                  <div key={i} className="suggestion-item">
+                    <p>{s}</p>
+                    <button type="button" onClick={() => navigator.clipboard.writeText(s)}>Copy</button>
+                  </div>
+                ))}
+              </div>
+            )}
             <input placeholder="Company" value={form.company} onChange={e => setForm({...form, company: e.target.value})} />
             <input placeholder="Role" value={form.role} onChange={e => setForm({...form, role: e.target.value})} />
             <input placeholder="JD Link" value={form.jdLink} onChange={e => setForm({...form, jdLink: e.target.value})} />
@@ -93,8 +138,8 @@ export default function App() {
               {STATUSES.map(s => <option key={s}>{s}</option>)}
             </select>
             <div className="btn-group">
-              <button onClick={handleSubmit}>Save</button>
-              <button onClick={() => setShowForm(false)} className="cancel">Cancel</button>
+              <button type="button" onClick={handleSubmit}>Save</button>
+              <button type="button" onClick={() => setShowForm(false)} className="cancel">Cancel</button>
             </div>
           </div>
         </div>
@@ -110,8 +155,8 @@ export default function App() {
                 <p>{app.role}</p>
                 <p className="date">{new Date(app.dateApplied).toLocaleDateString()}</p>
                 <div className="card-actions">
-                  <button onClick={() => { setForm({company:app.company,role:app.role,status:app.status,notes:app.notes||'',jdLink:app.jdLink||''}); setEditId(app._id); setShowForm(true); }}>Edit</button>
-                  <button onClick={() => handleDelete(app._id)} className="del">Delete</button>
+                  <button type="button" onClick={() => { setForm({company:app.company,role:app.role,status:app.status,notes:app.notes||'',jdLink:app.jdLink||''}); setEditId(app._id); setShowForm(true); }}>Edit</button>
+                  <button type="button" onClick={() => handleDelete(app._id)} className="del">Delete</button>
                 </div>
               </div>
             ))}
