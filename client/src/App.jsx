@@ -20,6 +20,8 @@ export default function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [parseError, setParseError] = useState('');
   const [selectedApp, setSelectedApp] = useState(null);
+  const [search, setSearch] = useState('');
+  const [showDashboard, setShowDashboard] = useState(false);
 
   useEffect(() => { if (token) fetchApps(); }, [token]);
 
@@ -99,6 +101,11 @@ export default function App() {
 
   const logout = () => { localStorage.removeItem('token'); setToken(null); };
 
+  const filteredApps = apps.filter(a =>
+    a.company.toLowerCase().includes(search.toLowerCase()) ||
+    a.role.toLowerCase().includes(search.toLowerCase())
+  );
+
   if (!token) return (
     <div className="auth-container">
       <h1>Job Tracker</h1>
@@ -117,11 +124,40 @@ export default function App() {
     <div className="app">
       <div className="header">
         <h1>Job Tracker</h1>
-        <div>
+        <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+          <input
+            placeholder="🔍 Search company or role..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{padding:'8px 12px', borderRadius:'6px', border:'1px solid #ccc', width:'220px'}}
+          />
+          <button onClick={() => setShowDashboard(true)} style={{background:'#6c757d'}}>📊 Stats</button>
           <button onClick={() => { setShowForm(true); setEditId(null); setForm({ company:'', role:'', status:'Applied', notes:'', jdLink:'', salaryRange:'', dateApplied: new Date().toISOString().split('T')[0] }); setJd(''); setSuggestions([]); setParseError(''); }}>+ Add Application</button>
           <button onClick={logout} className="logout">Logout</button>
         </div>
       </div>
+
+      {/* Dashboard Modal */}
+      {showDashboard && (
+        <div className="modal" onClick={() => setShowDashboard(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h2>📊 Application Stats</h2>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', margin:'16px 0'}}>
+              <div style={{background:'#e3f2fd', padding:'16px', borderRadius:'8px', textAlign:'center'}}>
+                <h3 style={{margin:0, fontSize:'32px', color:'#1976d2'}}>{apps.length}</h3>
+                <p style={{margin:0, color:'#555'}}>Total Applications</p>
+              </div>
+              {STATUSES.map(s => (
+                <div key={s} style={{background:'#f5f5f5', padding:'12px', borderRadius:'8px', textAlign:'center'}}>
+                  <h3 style={{margin:0, fontSize:'24px', color:'#333'}}>{apps.filter(a => a.status === s).length}</h3>
+                  <p style={{margin:0, fontSize:'12px', color:'#555'}}>{s}</p>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowDashboard(false)} className="cancel" style={{width:'100%'}}>Close</button>
+          </div>
+        </div>
+      )}
 
       {/* Card Detail View */}
       {selectedApp && (
@@ -186,11 +222,11 @@ export default function App() {
       <div className="kanban">
         {STATUSES.map(status => (
           <div key={status} className="column" onDragOver={e => e.preventDefault()} onDrop={() => handleDrop(status)}>
-            <h3>{status} <span className="count">{apps.filter(a => a.status === status).length}</span></h3>
-            {apps.filter(a => a.status === status).length === 0 && (
-              <p className="empty-col">No applications</p>
+            <h3>{status} <span className="count">{filteredApps.filter(a => a.status === status).length}</span></h3>
+            {filteredApps.filter(a => a.status === status).length === 0 && (
+              <p className="empty-col">{search ? 'No results' : 'No applications'}</p>
             )}
-            {apps.filter(a => a.status === status).map(app => (
+            {filteredApps.filter(a => a.status === status).map(app => (
               <div key={app._id} className="card" draggable
                 onDragStart={() => setDragging(app)}
                 onClick={() => setSelectedApp(app)}>
